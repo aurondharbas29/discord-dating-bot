@@ -1,4 +1,5 @@
 require('dotenv').config();
+const express = require('express'); // Tambahan untuk hosting Render
 const { 
     Client, 
     GatewayIntentBits, 
@@ -11,6 +12,19 @@ const {
     EmbedBuilder,
     Events
 } = require('discord.js');
+
+// --- SETUP SERVER HTTP (Agar bot tidak tertidur di Render) ---
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+    res.send('💖 DatingBot Discord is active and running 24/7!');
+});
+
+app.listen(PORT, () => {
+    console.log(`Server HTTP berjalan di port ${PORT}`);
+});
+// -----------------------------------------------------------
 
 const client = new Client({
     intents: [
@@ -29,11 +43,10 @@ client.once(Events.ClientReady, c => {
     console.log(`💖 Bot Dating Apps online sebagai ${c.user.tag}!`);
 });
 
-// Fungsi Pembantu: Mengambil Profil Acak (Termasuk Fitur Skip)
+// Fungsi Pembantu: Mengambil Profil Acak (Fitur Skip)
 function getRandomProfile(currentUserId, excludeTargetId = null) {
     let availableProfiles = Array.from(userProfiles.values()).filter(p => p.userId !== currentUserId);
     
-    // Jika tombol skip ditekan, hindari profil yang sedang di-skip agar berganti ke orang lain
     if (excludeTargetId && availableProfiles.length > 1) {
         availableProfiles = availableProfiles.filter(p => p.userId !== excludeTargetId);
     }
@@ -183,7 +196,6 @@ client.on(Events.InteractionCreate, async interaction => {
                 .setStyle(ButtonStyle.Secondary)
         );
 
-        // Kirim tampilan kartu secara rahasia (Ephemeral)
         await interaction.reply({ embeds: [cardEmbed], components: [rowCard], ephemeral: true });
     }
 
@@ -207,10 +219,8 @@ client.on(Events.MessageCreate, async message => {
             const photoUrl = attachment.url;
             const stateData = userStates.get(message.author.id);
 
-            // LANGSUNG HAPUS pesan foto asli dari channel publik secara instan tanpa delay
             message.delete().catch(() => {});
 
-            // Simpan profil lengkap secara rahasia
             userProfiles.set(message.author.id, {
                 userId: message.author.id,
                 username: message.author.username,
@@ -220,7 +230,6 @@ client.on(Events.MessageCreate, async message => {
 
             userStates.delete(message.author.id);
 
-            // Kirim konfirmasi privat rahasia via DM
             const previewEmbed = new EmbedBuilder()
                 .setTitle(`💖 Profil Dating Berhasil Dibuat & Disembunyikan!`)
                 .setColor('#FE01D4')
